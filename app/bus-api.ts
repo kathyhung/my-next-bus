@@ -268,7 +268,10 @@ export async function fetchJourneyEtas(journey: FavouriteJourney) {
       (row) =>
         row.route.toUpperCase() === journey.route.toUpperCase() &&
         row.dir === journey.bound &&
-        Number(row.seq) === journey.seq &&
+        // Citybus ETA responses are already scoped to the requested stop and
+        // route. Their live trip sequence can differ from the canonical
+        // route-stop sequence, so only KMB should require an exact match.
+        (journey.operator === "CTB" || Number(row.seq) === journey.seq) &&
         row.eta,
     )
     .map<EtaRecord>((row) => ({
