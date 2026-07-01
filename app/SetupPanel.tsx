@@ -169,7 +169,7 @@ export default function SetupPanel({
             <h2 id="setup-title">Choose a journey</h2>
             <p className="setup-intro">
               Pick the exact direction and boarding stop. This is saved only on
-              this tablet.
+              this device.
             </p>
           </div>
           <button className="icon-button" type="button" onClick={onClose}>
@@ -420,7 +420,7 @@ export default function SetupPanel({
         )}
 
         <footer className="setup-footer">
-          <span>Route choices remain on this tablet only.</span>
+          <span>Route choices remain on this device only.</span>
           <button className="secondary-button" type="button" onClick={onClose}>
             Done
           </button>

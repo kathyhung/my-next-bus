@@ -1326,72 +1326,203 @@ input:focus-visible {
 @media (max-width: 540px) {
   .board-header {
     grid-template-columns: 1fr auto;
-    gap: 10px;
+    gap: 8px 12px;
+    padding: 11px 12px 9px;
+    background: rgba(7, 17, 31, 0.94);
+    backdrop-filter: blur(18px);
   }
 
   .brand-mark {
     display: none;
   }
 
+  .brand-block .eyebrow {
+    font-size: 0.58rem;
+  }
+
   .brand-block h1 {
-    font-size: 1.25rem;
+    font-size: 1.2rem;
   }
 
   .header-clock strong {
-    font-size: 2.25rem;
+    font-size: 1.95rem;
+  }
+
+  .header-clock span {
+    display: none;
   }
 
   .board-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 6px;
+    overflow: visible;
+    padding-bottom: 0;
+  }
+
+  .language-toggle {
+    max-width: 124px;
+    flex: 1 1 88px;
+  }
+
+  .language-toggle button {
+    min-width: 40px;
+    min-height: 36px;
+    flex: 1;
+    padding-inline: 8px;
+  }
+
+  .board-actions .action-button,
+  .board-actions .header-icon {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .board-actions > .primary-button {
+    width: 48px;
+    min-width: 48px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+  }
+
+  .board-actions .action-label {
+    display: none;
+  }
+
+  .action-symbol {
+    font-size: 1.12rem;
+    line-height: 1;
+  }
+
+  .status-strip {
+    min-height: 38px;
+    gap: 9px;
+    padding: 6px 12px;
+    font-size: 0.68rem;
+  }
+
+  .live-status {
+    flex: 0 0 auto;
     gap: 6px;
   }
 
-  .action-button {
-    padding: 0 10px;
-  }
-
-  .action-button span + * {
-    display: none;
-  }
-
   .updated-copy {
+    min-width: 0;
     margin-left: auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .arrival-board {
+    min-height: calc(100dvh - 160px);
+    padding: 8px;
+  }
+
+  .journey-list {
+    gap: 8px;
   }
 
   .journey-row {
-    grid-template-columns: 76px minmax(0, 1fr);
-    border-radius: 18px;
+    grid-template-columns: 68px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    border-radius: 17px;
+  }
+
+  .route-badge {
+    grid-row: 1;
+    min-height: 76px;
+    border-right: 1px solid rgba(255, 255, 255, 0.18);
+    border-bottom: 0;
+  }
+
+  .route-badge span {
+    font-size: 0.52rem;
   }
 
   .route-badge strong {
-    font-size: 1.8rem;
+    padding-inline: 5px;
+    font-size: 1.65rem;
   }
 
   .route-badge strong.long-route-number {
-    font-size: 1.4rem;
+    padding-inline: 3px;
+    font-size: 1.22rem;
   }
 
   .journey-copy {
-    padding: 14px;
+    min-height: 76px;
+    padding: 10px 12px;
+    border-bottom: 0;
+  }
+
+  .destination-prefix {
+    margin-bottom: 3px;
+    font-size: 0.55rem;
   }
 
   .journey-copy h2 {
-    font-size: 1.25rem;
+    font-size: 1.06rem;
+    line-height: 1.05;
+  }
+
+  .stop-name {
+    margin-top: 6px;
+    font-size: 0.7rem;
+  }
+
+  .etas {
+    grid-column: 1 / -1;
+    min-height: 76px;
+    border-top: 1px solid var(--line);
   }
 
   .eta {
-    padding: 12px 5px;
+    min-height: 76px;
+    padding: 8px 4px;
   }
 
   .eta strong {
-    font-size: 1.35rem;
+    font-size: clamp(1.15rem, 5.6vw, 1.55rem);
   }
 
-  .eta:nth-child(n + 3) {
-    display: none;
+  .eta span {
+    margin-top: 5px;
+    font-size: 0.65rem;
+  }
+
+  .eta em {
+    font-size: 0.47rem;
+  }
+
+  .eta-skeleton {
+    height: 38px;
+  }
+
+  .eta-skeleton.small {
+    height: 32px;
+  }
+
+  .no-arrivals {
+    grid-column: 1 / -1;
+    min-height: 76px;
+  }
+
+  .row-warning {
+    right: 8px;
+    bottom: 5px;
+    font-size: 0.55rem;
   }
 
   .board-footer {
     gap: 8px;
+    min-height: 42px;
+    padding: 6px 12px calc(6px + env(safe-area-inset-bottom));
   }
 
   .board-footer > span {
@@ -1400,15 +1531,224 @@ input:focus-visible {
     white-space: nowrap;
   }
 
+  .empty-board {
+    min-height: calc(100dvh - 210px);
+    padding: 20px 10px;
+  }
+
+  .empty-route-sign {
+    width: 68px;
+    height: 68px;
+    margin-bottom: 18px;
+    border-radius: 20px;
+    font-size: 2.2rem;
+  }
+
+  .empty-board h2 {
+    font-size: 2rem;
+  }
+
+  .empty-board > p:not(.eyebrow) {
+    margin-bottom: 20px;
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+
+  .toast {
+    right: 10px;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    left: 10px;
+    max-width: none;
+  }
+
+  .setup-panel {
+    overscroll-behavior: contain;
+  }
+
   .setup-header,
   .saved-section,
   .setup-step {
-    padding-left: 17px;
-    padding-right: 17px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .setup-header {
+    align-items: center;
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-bottom: 12px;
+  }
+
+  .setup-header .eyebrow {
+    display: none;
+  }
+
+  .setup-header h2 {
+    font-size: 1.4rem;
+  }
+
+  .setup-intro {
+    margin-top: 4px;
+    font-size: 0.7rem;
+    line-height: 1.35;
+  }
+
+  .setup-header .icon-button {
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+  }
+
+  .saved-section {
+    padding-top: 13px;
+    padding-bottom: 13px;
   }
 
   .saved-list {
     grid-template-columns: 1fr;
+  }
+
+  .setup-grid {
+    min-height: 0;
+  }
+
+  .setup-step {
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+
+  .step-title {
+    min-height: 0;
+    margin-bottom: 12px;
+  }
+
+  .operator-toggle {
+    margin-bottom: 14px;
+  }
+
+  .route-picker {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    max-height: 216px;
+  }
+
+  .direction-list {
+    max-height: 260px;
+  }
+
+  .stop-list {
+    max-height: min(360px, 52dvh);
+  }
+
+  .setup-error {
+    align-items: stretch;
+    flex-direction: column;
+    margin: 0 14px 14px;
+  }
+
+  .setup-footer {
+    min-height: 60px;
+    padding: 7px 14px max(7px, env(safe-area-inset-bottom));
+  }
+
+  .setup-footer > span {
+    display: none;
+  }
+
+  .setup-footer .secondary-button {
+    width: 100%;
+    min-height: 46px;
+  }
+}
+
+@media (max-width: 380px) {
+  .board-header {
+    gap: 7px 9px;
+    padding-inline: 10px;
+  }
+
+  .brand-block .eyebrow {
+    display: none;
+  }
+
+  .brand-block h1 {
+    font-size: 1.08rem;
+  }
+
+  .header-clock strong {
+    font-size: 1.7rem;
+  }
+
+  .language-toggle {
+    max-width: 100px;
+  }
+
+  .board-actions .action-button,
+  .board-actions .header-icon {
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+    min-height: 42px;
+  }
+
+  .board-actions > .primary-button {
+    width: 44px;
+    min-width: 44px;
+    height: 42px;
+    min-height: 42px;
+  }
+
+  .status-strip {
+    padding-inline: 10px;
+  }
+
+  .updated-copy {
+    font-size: 0.62rem;
+  }
+
+  .arrival-board {
+    padding: 6px;
+  }
+
+  .journey-row {
+    grid-template-columns: 62px minmax(0, 1fr);
+  }
+
+  .route-badge,
+  .journey-copy {
+    min-height: 70px;
+  }
+
+  .route-badge strong {
+    font-size: 1.48rem;
+  }
+
+  .route-badge strong.long-route-number {
+    font-size: 1.08rem;
+  }
+
+  .journey-copy {
+    padding: 9px 10px;
+  }
+
+  .journey-copy h2 {
+    font-size: 0.98rem;
+  }
+
+  .etas,
+  .eta,
+  .no-arrivals {
+    min-height: 72px;
+  }
+
+  .eta strong {
+    font-size: 1.08rem;
+  }
+
+  .eta span {
+    font-size: 0.6rem;
+  }
+
+  .eta em {
+    font-size: 0.42rem;
   }
 }
 

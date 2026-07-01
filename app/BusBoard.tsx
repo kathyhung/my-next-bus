@@ -423,29 +423,55 @@ export default function BusBoard() {
             </button>
           </div>
           {installPrompt && (
-            <button className="action-button install" type="button" onClick={installApp}>
-              <span aria-hidden="true">↓</span> Install
+            <button
+              className="action-button install"
+              type="button"
+              aria-label="Install app"
+              title="Install app"
+              onClick={installApp}
+            >
+              <span className="action-symbol" aria-hidden="true">↓</span>
+              <span className="action-label">Install</span>
             </button>
           )}
           <button
             className={`action-button ${wakeActive ? "active" : ""}`}
             type="button"
             aria-pressed={wakeWanted}
+            aria-label={wakeActive ? "Keep-awake mode is on" : "Turn on keep-awake mode"}
+            title={wakeActive ? "Keep-awake mode is on" : "Turn on keep-awake mode"}
             onClick={toggleWakeLock}
           >
-            <span aria-hidden="true">☀</span>
-            {wakeActive ? "Awake" : "Keep awake"}
+            <span className="action-symbol" aria-hidden="true">☀</span>
+            <span className="action-label">{wakeActive ? "Awake" : "Keep awake"}</span>
           </button>
-          <button className="icon-button header-icon" type="button" onClick={refreshAll}>
+          <button
+            className="icon-button header-icon"
+            type="button"
+            title="Refresh arrival times"
+            onClick={refreshAll}
+          >
             <span className={refreshing ? "spin" : ""} aria-hidden="true">↻</span>
             <span className="sr-only">Refresh arrival times</span>
           </button>
-          <button className="icon-button header-icon" type="button" onClick={toggleFullscreen}>
+          <button
+            className="icon-button header-icon"
+            type="button"
+            title="Toggle fullscreen"
+            onClick={toggleFullscreen}
+          >
             <span aria-hidden="true">⛶</span>
             <span className="sr-only">Toggle fullscreen</span>
           </button>
-          <button className="primary-button" type="button" onClick={() => setSetupOpen(true)}>
-            <span aria-hidden="true">＋</span> {language === "tc" ? "路線" : "Route"}
+          <button
+            className="primary-button"
+            type="button"
+            aria-label={language === "tc" ? "管理路線" : "Manage routes"}
+            title={language === "tc" ? "管理路線" : "Manage routes"}
+            onClick={() => setSetupOpen(true)}
+          >
+            <span className="action-symbol" aria-hidden="true">＋</span>
+            <span className="action-label">{language === "tc" ? "路線" : "Route"}</span>
           </button>
         </div>
       </header>
@@ -475,8 +501,8 @@ export default function BusBoard() {
             <h2>{language === "tc" ? "加入你常搭的巴士" : "Add your family’s usual buses"}</h2>
             <p>
               {language === "tc"
-                ? "選擇營辦商、方向和實際上車站。設定只會儲存在這部平板電腦。"
-                : "Choose the operator, direction and exact boarding stop. Your choices stay on this tablet."}
+                ? "選擇營辦商、方向和實際上車站。設定只會儲存在這部裝置。"
+                : "Choose the operator, direction and exact boarding stop. Your choices stay on this device."}
             </p>
             <button className="primary-button large" type="button" onClick={() => setSetupOpen(true)}>
               {language === "tc" ? "加入第一條路線" : "Add first route"}
