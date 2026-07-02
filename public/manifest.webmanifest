@@ -1,6 +1,6 @@
 {
   "name": "My Next Bus",
-  "short_name": "Next Bus",
+  "short_name": "My Next Bus",
   "description": "Live KMB and Citybus arrivals for your family's usual stops.",
   "id": "./",
   "start_url": "./",
