@@ -4,9 +4,9 @@ import "./globals.css";
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 export const metadata: Metadata = {
-  title: "HK Bus Board",
+  title: "My Next Bus",
   description: "A glanceable, live KMB and Citybus arrival board for home.",
-  applicationName: "HK Bus Board",
+  applicationName: "My Next Bus",
   manifest: `${basePath}/manifest.webmanifest`,
   icons: {
     icon: `${basePath}/bus-board-icon.svg`,
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Bus Board",
+    title: "My Next Bus",
   },
 };
 

@@ -1,4 +1,4 @@
-name: Deploy HK Bus Board to GitHub Pages
+name: Deploy My Next Bus to GitHub Pages
 
 on:
   push:

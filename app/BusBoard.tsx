@@ -9,10 +9,10 @@ import type {
   Language,
 } from "./types";
 
-const FAVOURITES_KEY = "hk-bus-board:favourites:v1";
-const ETA_CACHE_KEY = "hk-bus-board:eta-cache:v1";
-const LANGUAGE_KEY = "hk-bus-board:language:v1";
-const WAKE_KEY = "hk-bus-board:keep-awake:v1";
+const FAVOURITES_KEY = "my-next-bus:favourites:v1";
+const ETA_CACHE_KEY = "my-next-bus:eta-cache:v1";
+const LANGUAGE_KEY = "my-next-bus:language:v1";
+const WAKE_KEY = "my-next-bus:keep-awake:v1";
 const STALE_AFTER_MS = 7 * 60_000;
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
@@ -396,7 +396,7 @@ export default function BusBoard() {
           </div>
           <div>
             <p className="eyebrow">Hong Kong</p>
-            <h1>{language === "tc" ? "巴士到站時間" : "Next buses"}</h1>
+            <h1>{language === "tc" ? "我的下一班巴士" : "My Next Bus"}</h1>
           </div>
         </div>
 

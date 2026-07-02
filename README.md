@@ -1,4 +1,4 @@
-# HK Bus Board
+# My Next Bus
 
 A tablet-first Progressive Web App for displaying live KMB/LWB and Citybus
 arrival times at home. It calls the official DATA.GOV.HK feeds directly from
@@ -67,7 +67,7 @@ After deploying to an HTTPS URL:
 
 1. Open the URL in Chrome.
 2. Open Chrome's menu and choose **Add to Home screen** → **Install**.
-3. Launch **HK Bus Board** from the new home-screen icon.
+3. Launch **My Next Bus** from the new home-screen icon.
 4. Tap **Route** and choose operator, route, direction, and boarding stop.
 5. Tap **Keep awake**, then use the fullscreen button if desired.
 

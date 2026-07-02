@@ -1,6 +1,6 @@
 {
-  "name": "HK Bus Board",
-  "short_name": "Bus Board",
+  "name": "My Next Bus",
+  "short_name": "Next Bus",
   "description": "Live KMB and Citybus arrivals for your family's usual stops.",
   "id": "./",
   "start_url": "./",

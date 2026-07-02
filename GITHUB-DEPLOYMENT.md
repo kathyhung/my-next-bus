@@ -1,4 +1,4 @@
-# Publish HK Bus Board with GitHub Pages
+# Publish My Next Bus with GitHub Pages
 
 GitHub Pages hosts this app without a home server. After publication, the
 tablet talks directly to the official KMB/LWB and Citybus feeds. Your saved
@@ -18,10 +18,10 @@ The easiest method on Windows is GitHub Desktop:
 
 1. Install and sign in to GitHub Desktop.
 2. Select **File → Add local repository**.
-3. Choose the `hk-bus-board` source folder.
+3. Choose the `my-next-bus` source folder.
 4. If GitHub Desktop says it is not yet a repository, choose **Create a
    repository here**.
-5. Use `hk-bus-board` as the repository name and `main` as the default branch.
+5. Use `my-next-bus` as the repository name and `main` as the default branch.
 6. Commit all files with a summary such as `Initial tablet bus board`.
 7. Select **Publish repository**.
 8. Clear **Keep this code private** so GitHub Pages works with GitHub Free, then
@@ -35,7 +35,7 @@ Do not add Wi-Fi passwords or other secrets. This project does not need any.
 2. Select **Settings → Pages**.
 3. Under **Build and deployment**, set **Source** to **GitHub Actions**.
 4. Select the repository's **Actions** tab.
-5. Open **Deploy HK Bus Board to GitHub Pages**.
+5. Open **Deploy My Next Bus to GitHub Pages**.
 6. Select **Run workflow → Run workflow**.
 7. Wait for both the build and deploy jobs to show green checks.
 
@@ -44,14 +44,14 @@ is harmless; run it again after completing the settings above.
 
 ## 3. Open the site
 
-For a repository called `hk-bus-board`, the normal address is:
+For a repository called `my-next-bus`, the normal address is:
 
 ```text
-https://YOUR-GITHUB-USERNAME.github.io/hk-bus-board/
+https://YOUR-GITHUB-USERNAME.github.io/my-next-bus/
 ```
 
 The deployment job also displays the exact address. Open it on a computer once
-and confirm that **Next buses** and the **Route** button appear.
+and confirm that **My Next Bus** and the **Route** button appear.
 
 ## 4. Install it on the Android tablet
 
@@ -59,7 +59,7 @@ and confirm that **Next buses** and the **Route** button appear.
 2. Let the page finish loading, then open Chrome's three-dot menu.
 3. Choose **Add to Home screen** and then **Install**. Some Chrome versions show
    **Install app** directly.
-4. Launch **HK Bus Board** from its new home-screen icon.
+4. Launch **My Next Bus** from its new home-screen icon.
 5. Tap **Route**, select KMB or Citybus, choose the route and direction, and tap
    the family's boarding stop.
 6. Add the other regularly used journeys.

@@ -1,4 +1,4 @@
-const CACHE_NAME = "hk-bus-board-shell-v2";
+const CACHE_NAME = "my-next-bus-shell-v3";
 const BASE_PATH = new URL(self.location.href).pathname.replace(/\/sw\.js$/, "");
 const appPath = (path) => `${BASE_PATH}${path}`;
 const APP_SHELL = [
