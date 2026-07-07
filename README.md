@@ -1,9 +1,10 @@
 # My Next Bus
 
-A tablet-first Progressive Web App for displaying live KMB/LWB and Citybus
-arrival times at home. It calls the official DATA.GOV.HK feeds directly from
-the browser. Favourite journeys and cached results stay on the device; there is
-no account, database, API key, or analytics service.
+A mobile-first Progressive Web App for displaying live KMB/LWB and Citybus
+arrival times. It calls the official DATA.GOV.HK feeds directly from the
+browser. Favourite journeys are organized into named sheets and stay on the
+device with cached results; there is no account, database, API key, or analytics
+service.
 
 ## Local development
 
@@ -14,8 +15,8 @@ npm install
 npm run dev
 ```
 
-Open the local URL, choose **Add route**, and select an operator, route,
-direction, and boarding stop.
+Open the local URL, choose a sheet, then select **Add route** and pick an
+operator, direction, and boarding stop.
 
 ## Production validation
 

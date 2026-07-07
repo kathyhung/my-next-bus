@@ -13,6 +13,7 @@ import type {
 interface SetupPanelProps {
   favourites: FavouriteJourney[];
   language: Language;
+  sheetName: string;
   onAdd: (journey: FavouriteJourney) => void;
   onRemove: (id: string) => void;
   onClose: () => void;
@@ -34,6 +35,7 @@ function journeyDestination(journey: RouteVariant, language: Language) {
 export default function SetupPanel({
   favourites,
   language,
+  sheetName,
   onAdd,
   onRemove,
   onClose,
@@ -181,7 +183,7 @@ export default function SetupPanel({
         {favourites.length > 0 && (
           <section className="saved-section" aria-labelledby="saved-title">
             <div className="section-heading-row">
-              <h3 id="saved-title">On your board</h3>
+              <h3 id="saved-title">On {sheetName}</h3>
               <span>{favourites.length} saved</span>
             </div>
             <div className="saved-list">
@@ -420,7 +422,7 @@ export default function SetupPanel({
         )}
 
         <footer className="setup-footer">
-          <span>Route choices remain on this device only.</span>
+          <span>Routes are saved in {sheetName} on this device.</span>
           <button className="secondary-button" type="button" onClick={onClose}>
             Done
           </button>

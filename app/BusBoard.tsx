@@ -1,15 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { fetchJourneyEtas } from "./bus-api";
 import SetupPanel from "./SetupPanel";
 import type {
   FavouriteJourney,
   JourneyEtaState,
   Language,
+  RouteSheet,
 } from "./types";
 
-const FAVOURITES_KEY = "my-next-bus:favourites:v1";
+const LEGACY_FAVOURITES_KEY = "my-next-bus:favourites:v1";
+const SHEETS_KEY = "my-next-bus:sheets:v1";
+const ACTIVE_SHEET_KEY = "my-next-bus:active-sheet:v1";
 const ETA_CACHE_KEY = "my-next-bus:eta-cache:v1";
 const LANGUAGE_KEY = "my-next-bus:language:v1";
 const WAKE_KEY = "my-next-bus:keep-awake:v1";
@@ -39,6 +49,30 @@ interface NavigatorWithStandalone extends Navigator {
 
 type InstallPlatform = "ios" | "android" | "other";
 type EtaMap = Record<string, JourneyEtaState>;
+const EMPTY_JOURNEYS: FavouriteJourney[] = [];
+
+function normalizeSheets(value: RouteSheet[]) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (sheet) =>
+        sheet &&
+        typeof sheet.id === "string" &&
+        typeof sheet.name === "string" &&
+        Array.isArray(sheet.journeys),
+    )
+    .map((sheet) => ({
+      ...sheet,
+      name: sheet.name.trim().toUpperCase().slice(0, 6) || "SHEET",
+    }));
+}
+
+function createSheetId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `sheet-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
 
 function detectInstallPlatform(): InstallPlatform {
   const userAgent = navigator.userAgent;
@@ -106,7 +140,11 @@ function etaLabel(timestamp: number, now: number, language: Language) {
 
 export default function BusBoard() {
   const [hydrated, setHydrated] = useState(false);
-  const [favourites, setFavourites] = useState<FavouriteJourney[]>([]);
+  const [sheets, setSheets] = useState<RouteSheet[]>([]);
+  const [activeSheetId, setActiveSheetId] = useState("");
+  const [sheetCreatorOpen, setSheetCreatorOpen] = useState(false);
+  const [newSheetName, setNewSheetName] = useState("");
+  const [sheetNameError, setSheetNameError] = useState("");
   const [etaByJourney, setEtaByJourney] = useState<EtaMap>({});
   const [language, setLanguage] = useState<Language>("en");
   const [setupOpen, setSetupOpen] = useState(false);
@@ -121,14 +159,33 @@ export default function BusBoard() {
   const [notice, setNotice] = useState("");
   const wakeLockRef = useRef<WakeLockHandle | null>(null);
 
+  const activeSheet = useMemo(
+    () => sheets.find((sheet) => sheet.id === activeSheetId) ?? sheets[0],
+    [activeSheetId, sheets],
+  );
+  const favourites = activeSheet?.journeys ?? EMPTY_JOURNEYS;
+
   useEffect(() => {
     const hydrationTimer = window.setTimeout(() => {
-      const savedFavourites = parseStored<FavouriteJourney[]>(FAVOURITES_KEY, []);
+      const storedSheets = normalizeSheets(parseStored<RouteSheet[]>(SHEETS_KEY, []));
+      const savedFavourites = parseStored<FavouriteJourney[]>(
+        LEGACY_FAVOURITES_KEY,
+        [],
+      );
+      const initialSheets =
+        storedSheets.length > 0
+          ? storedSheets
+          : [{ id: "grp1", name: "GRP1", journeys: savedFavourites }];
+      const storedActiveSheetId = window.localStorage.getItem(ACTIVE_SHEET_KEY);
+      const initialActiveSheet =
+        initialSheets.find((sheet) => sheet.id === storedActiveSheetId) ??
+        initialSheets[0];
       const savedEtas = parseStored<EtaMap>(ETA_CACHE_KEY, {});
       const savedLanguage = window.localStorage.getItem(LANGUAGE_KEY);
       const savedWake = window.localStorage.getItem(WAKE_KEY) === "true";
 
-      setFavourites(savedFavourites);
+      setSheets(initialSheets);
+      setActiveSheetId(initialActiveSheet.id);
       setEtaByJourney(
         Object.fromEntries(
           Object.entries(savedEtas).map(([id, value]) => [
@@ -142,7 +199,7 @@ export default function BusBoard() {
       }
       setWakeWanted(savedWake);
       setOnline(navigator.onLine);
-      setSetupOpen(savedFavourites.length === 0);
+      setSetupOpen(initialActiveSheet.journeys.length === 0);
       setNow(Date.now());
       setHydrated(true);
     }, 0);
@@ -158,8 +215,14 @@ export default function BusBoard() {
 
   useEffect(() => {
     if (!hydrated) return;
-    window.localStorage.setItem(FAVOURITES_KEY, JSON.stringify(favourites));
-  }, [favourites, hydrated]);
+    window.localStorage.setItem(SHEETS_KEY, JSON.stringify(sheets));
+    window.localStorage.removeItem(LEGACY_FAVOURITES_KEY);
+  }, [hydrated, sheets]);
+
+  useEffect(() => {
+    if (!hydrated || !activeSheetId) return;
+    window.localStorage.setItem(ACTIVE_SHEET_KEY, activeSheetId);
+  }, [activeSheetId, hydrated]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -387,16 +450,74 @@ export default function BusBoard() {
   }
 
   function addFavourite(journey: FavouriteJourney) {
-    setFavourites((current) => [...current, journey]);
+    setSheets((current) =>
+      current.map((sheet) =>
+        sheet.id === activeSheetId
+          ? { ...sheet, journeys: [...sheet.journeys, journey] }
+          : sheet,
+      ),
+    );
   }
 
   function removeFavourite(id: string) {
-    setFavourites((current) => current.filter((item) => item.id !== id));
-    setEtaByJourney((current) => {
-      const next = { ...current };
-      delete next[id];
-      return next;
-    });
+    const usedOnAnotherSheet = sheets.some(
+      (sheet) =>
+        sheet.id !== activeSheetId &&
+        sheet.journeys.some((journey) => journey.id === id),
+    );
+    setSheets((current) =>
+      current.map((sheet) =>
+        sheet.id === activeSheetId
+          ? {
+              ...sheet,
+              journeys: sheet.journeys.filter((journey) => journey.id !== id),
+            }
+          : sheet,
+      ),
+    );
+    if (!usedOnAnotherSheet) {
+      setEtaByJourney((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
+    }
+  }
+
+  function switchSheet(sheetId: string) {
+    setActiveSheetId(sheetId);
+    setSetupOpen(false);
+  }
+
+  function openSheetCreator() {
+    setNewSheetName("");
+    setSheetNameError("");
+    setSheetCreatorOpen(true);
+  }
+
+  function createSheet(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = newSheetName.trim().toUpperCase();
+
+    if (!name) {
+      setSheetNameError("Enter a sheet name.");
+      return;
+    }
+    if (name.length > 6) {
+      setSheetNameError("Use no more than 6 characters.");
+      return;
+    }
+    if (sheets.some((sheet) => sheet.name.toUpperCase() === name)) {
+      setSheetNameError("That sheet name already exists.");
+      return;
+    }
+
+    const sheet: RouteSheet = { id: createSheetId(), name, journeys: [] };
+    setSheets((current) => [...current, sheet]);
+    setActiveSheetId(sheet.id);
+    setSheetCreatorOpen(false);
+    setSetupOpen(false);
+    setNotice(`${name} sheet created.`);
   }
 
   function changeLanguage(nextLanguage: Language) {
@@ -539,12 +660,21 @@ export default function BusBoard() {
         </span>
       </section>
 
-      <section className="arrival-board" aria-label="Saved bus arrivals">
+      <section
+        className="arrival-board"
+        id="arrival-board"
+        role="tabpanel"
+        aria-label={`${activeSheet?.name ?? "GRP1"} bus arrivals`}
+      >
         {hydrated && favourites.length === 0 ? (
           <div className="empty-board">
             <div className="empty-route-sign" aria-hidden="true">＋</div>
-            <p className="eyebrow">First-time setup</p>
-            <h2>{language === "tc" ? "加入你常搭的巴士" : "Add your family’s usual buses"}</h2>
+            <p className="eyebrow">{activeSheet?.name ?? "GRP1"} sheet</p>
+            <h2>
+              {language === "tc"
+                ? `加入巴士到 ${activeSheet?.name ?? "GRP1"}`
+                : `Add buses to ${activeSheet?.name ?? "GRP1"}`}
+            </h2>
             <p>
               {language === "tc"
                 ? "選擇營辦商、方向和實際上車站。設定只會儲存在這部裝置。"
@@ -648,7 +778,110 @@ export default function BusBoard() {
         </button>
       </footer>
 
+      <nav className="sheet-bar" aria-label="Bus route sheets">
+        <div className="sheet-tabs" role="tablist" aria-label="Bus route sheets">
+          {sheets.map((sheet) => (
+            <button
+              className={`sheet-tab ${sheet.id === activeSheet?.id ? "active" : ""}`}
+              type="button"
+              role="tab"
+              aria-selected={sheet.id === activeSheet?.id}
+              aria-controls="arrival-board"
+              key={sheet.id}
+              onClick={() => switchSheet(sheet.id)}
+            >
+              {sheet.name}
+            </button>
+          ))}
+        </div>
+        <button
+          className="sheet-add"
+          type="button"
+          aria-label="Add a new sheet"
+          title="Add a new sheet"
+          onClick={openSheetCreator}
+        >
+          <span aria-hidden="true">＋</span>
+        </button>
+      </nav>
+
       {notice && <div className="toast" role="status">{notice}</div>}
+
+      {sheetCreatorOpen && (
+        <div
+          className="sheet-dialog-backdrop"
+          role="presentation"
+          onClick={() => setSheetCreatorOpen(false)}
+        >
+          <section
+            className="sheet-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sheet-dialog-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <form onSubmit={createSheet}>
+              <header className="sheet-dialog-header">
+                <div>
+                  <p className="eyebrow">New route group</p>
+                  <h2 id="sheet-dialog-title">Add a sheet</h2>
+                </div>
+                <button
+                  className="icon-button"
+                  type="button"
+                  aria-label="Close new sheet dialog"
+                  onClick={() => setSheetCreatorOpen(false)}
+                >
+                  <span aria-hidden="true">×</span>
+                </button>
+              </header>
+
+              <div className="sheet-dialog-body">
+                <label className="field-label" htmlFor="sheet-name">
+                  Short name
+                </label>
+                <input
+                  id="sheet-name"
+                  className="search-input sheet-name-input"
+                  type="text"
+                  inputMode="text"
+                  autoComplete="off"
+                  autoFocus
+                  maxLength={6}
+                  placeholder="HOME"
+                  value={newSheetName}
+                  onChange={(event) => {
+                    setNewSheetName(event.target.value.toUpperCase().slice(0, 6));
+                    setSheetNameError("");
+                  }}
+                />
+                <div className="sheet-name-meta">
+                  <span>Use 1–6 characters, for example OFFICE.</span>
+                  <span>{newSheetName.length}/6</span>
+                </div>
+                {sheetNameError && (
+                  <p className="sheet-name-error" role="alert">
+                    {sheetNameError}
+                  </p>
+                )}
+              </div>
+
+              <footer className="sheet-dialog-actions">
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => setSheetCreatorOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button className="primary-button" type="submit">
+                  Create sheet
+                </button>
+              </footer>
+            </form>
+          </section>
+        </div>
+      )}
 
       {installHelp && (
         <div
@@ -762,6 +995,7 @@ export default function BusBoard() {
         <SetupPanel
           favourites={favourites}
           language={language}
+          sheetName={activeSheet?.name ?? "GRP1"}
           onAdd={addFavourite}
           onRemove={removeFavourite}
           onClose={() => setSetupOpen(false)}

@@ -24,6 +24,12 @@ export interface FavouriteJourney extends RouteVariant, StopOption {
   id: string;
 }
 
+export interface RouteSheet {
+  id: string;
+  name: string;
+  journeys: FavouriteJourney[];
+}
+
 export interface EtaRecord {
   timestamp: number;
   etaSequence: number;
