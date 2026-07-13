@@ -775,6 +775,10 @@ export default function BusBoard() {
           <div className="journey-list">
             {favourites.map((journey) => {
               const state = etaByJourney[journey.id];
+              const operators = [
+                journey.operator,
+                ...(journey.alternatives ?? []).map((item) => item.operator),
+              ];
               const visibleRecords = (state?.records ?? []).filter(
                 (record) => record.timestamp >= now - 60_000,
               );
@@ -783,7 +787,7 @@ export default function BusBoard() {
               return (
                 <article className="journey-row" key={journey.id}>
                   <div className={`route-badge ${journey.operator.toLowerCase()}`}>
-                    <span>{journey.operator === "KMB" ? "KMB" : "CTB"}</span>
+                    <span>{operators.join(" + ")}</span>
                     <strong
                       className={journey.route.length > 3 ? "long-route-number" : undefined}
                     >
@@ -818,11 +822,16 @@ export default function BusBoard() {
                           .toLocaleLowerCase();
                         const scheduled =
                           remarks.includes("scheduled") || remarks.includes("預定");
+                        const recordOperator = record.operator ?? journey.operator;
                         return (
-                          <div className={`eta ${index === 0 ? "next" : ""}`} key={`${record.timestamp}-${index}`}>
+                          <div
+                            className={`eta ${index === 0 ? "next" : ""}`}
+                            key={`${recordOperator}-${record.timestamp}-${index}`}
+                          >
                             <strong>{label}</strong>
                             <span className="eta-time">
                               {formatClock(record.timestamp, language)}
+                              <em>({recordOperator})</em>
                               {scheduled && (
                                 <em>({language === "tc" ? "預定班次" : "SCHEDULED"})</em>
                               )}

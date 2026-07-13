@@ -20,8 +20,11 @@ export interface StopOption {
   nameTc: string;
 }
 
-export interface FavouriteJourney extends RouteVariant, StopOption {
+export interface JourneyLeg extends RouteVariant, StopOption {}
+
+export interface FavouriteJourney extends JourneyLeg {
   id: string;
+  alternatives?: JourneyLeg[];
 }
 
 export interface RouteSheet {
@@ -33,6 +36,7 @@ export interface RouteSheet {
 export interface EtaRecord {
   timestamp: number;
   etaSequence: number;
+  operator: Operator;
   remarkEn: string;
   remarkTc: string;
 }

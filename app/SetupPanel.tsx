@@ -4,11 +4,20 @@ import { useEffect, useMemo, useState } from "react";
 import { fetchRouteVariants, fetchStopsForVariant } from "./bus-api";
 import type {
   FavouriteJourney,
+  JourneyLeg,
   Language,
   Operator,
   RouteVariant,
   StopOption,
 } from "./types";
+
+interface JointRouteDraft {
+  primary: FavouriteJourney;
+  alternativeVariant: RouteVariant;
+  stops: StopOption[];
+  selectedStopId: string;
+  suggestedStopId: string;
+}
 
 interface SetupPanelProps {
   favourites: FavouriteJourney[];
@@ -32,6 +41,83 @@ function journeyDestination(journey: RouteVariant, language: Language) {
   return journey.destinationEn || journey.destinationTc;
 }
 
+function normalizeName(value: string) {
+  return value
+    .normalize("NFKD")
+    .toLocaleLowerCase()
+    .replace(/[^a-z0-9\u3400-\u9fff]/g, "");
+}
+
+function textSimilarity(left: string, right: string) {
+  const a = normalizeName(left);
+  const b = normalizeName(right);
+  if (!a || !b) return 0;
+  if (a === b) return 1;
+  if (a.includes(b) || b.includes(a)) {
+    return Math.min(1, Math.min(a.length, b.length) / Math.max(a.length, b.length) + 0.25);
+  }
+
+  const aPairs = new Map<string, number>();
+  for (let index = 0; index < a.length - 1; index += 1) {
+    const pair = a.slice(index, index + 2);
+    aPairs.set(pair, (aPairs.get(pair) ?? 0) + 1);
+  }
+  let overlap = 0;
+  for (let index = 0; index < b.length - 1; index += 1) {
+    const pair = b.slice(index, index + 2);
+    const count = aPairs.get(pair) ?? 0;
+    if (count > 0) {
+      overlap += 1;
+      aPairs.set(pair, count - 1);
+    }
+  }
+  return (2 * overlap) / Math.max(1, a.length + b.length - 2);
+}
+
+function placeSimilarity(
+  left: Pick<RouteVariant, "originEn" | "originTc">,
+  right: Pick<RouteVariant, "originEn" | "originTc">,
+) {
+  return Math.max(
+    textSimilarity(left.originEn, right.originEn),
+    textSimilarity(left.originTc, right.originTc),
+  );
+}
+
+function findJointVariant(primary: RouteVariant, routes: RouteVariant[]) {
+  return routes
+    .filter((route) => route.route === primary.route)
+    .map((candidate) => {
+      const destination = placeSimilarity(
+        { originEn: primary.destinationEn, originTc: primary.destinationTc },
+        { originEn: candidate.destinationEn, originTc: candidate.destinationTc },
+      );
+      const origin = placeSimilarity(primary, candidate);
+      return {
+        candidate,
+        destination,
+        origin,
+        score: destination * 2 + origin + (candidate.serviceType === 1 ? 0.05 : 0),
+      };
+    })
+    .filter((match) => match.destination >= 0.55 && match.origin >= 0.55)
+    .sort((a, b) => b.score - a.score)[0]?.candidate;
+}
+
+function suggestAlternativeStop(primary: StopOption, stops: StopOption[]) {
+  const ranked = stops
+    .map((stop) => ({
+      stop,
+      score:
+        Math.max(
+          textSimilarity(primary.nameEn, stop.nameEn),
+          textSimilarity(primary.nameTc, stop.nameTc),
+        ) - Math.min(0.12, Math.abs(primary.seq - stop.seq) * 0.002),
+    }))
+    .sort((a, b) => b.score - a.score);
+  return ranked[0] && ranked[0].score >= 0.48 ? ranked[0].stop : null;
+}
+
 export default function SetupPanel({
   favourites,
   language,
@@ -51,6 +137,9 @@ export default function SetupPanel({
   const [stopQuery, setStopQuery] = useState("");
   const [loadingRoutes, setLoadingRoutes] = useState(true);
   const [loadingStops, setLoadingStops] = useState(false);
+  const [checkingJointRoute, setCheckingJointRoute] = useState(false);
+  const [jointDraft, setJointDraft] = useState<JointRouteDraft | null>(null);
+  const [alternativeStopQuery, setAlternativeStopQuery] = useState("");
   const [error, setError] = useState("");
   const [reloadToken, setReloadToken] = useState(0);
 
@@ -83,6 +172,8 @@ export default function SetupPanel({
     setStops([]);
     setRouteQuery("");
     setStopQuery("");
+    setJointDraft(null);
+    setAlternativeStopQuery("");
   }
 
   const routeNames = useMemo(
@@ -114,11 +205,25 @@ export default function SetupPanel({
     );
   }, [stops, stopQuery]);
 
+  const matchingAlternativeStops = useMemo(() => {
+    if (!jointDraft) return [];
+    const query = alternativeStopQuery.trim().toLocaleLowerCase();
+    if (!query) return jointDraft.stops;
+    return jointDraft.stops.filter(
+      (stop) =>
+        stop.nameEn.toLocaleLowerCase().includes(query) ||
+        stop.nameTc.includes(alternativeStopQuery.trim()) ||
+        String(stop.seq) === query,
+    );
+  }, [alternativeStopQuery, jointDraft]);
+
   async function selectVariant(variant: RouteVariant) {
     setSelectedVariant(variant);
     setStops([]);
     setStopQuery("");
     setError("");
+    setJointDraft(null);
+    setAlternativeStopQuery("");
     setLoadingStops(true);
     try {
       setStops(await fetchStopsForVariant(variant));
@@ -129,7 +234,7 @@ export default function SetupPanel({
     }
   }
 
-  function addStop(stop: StopOption) {
+  async function addStop(stop: StopOption) {
     if (!selectedVariant) return;
     const duplicate = favourites.some(
       (item) =>
@@ -142,7 +247,7 @@ export default function SetupPanel({
     );
     if (duplicate) return;
 
-    onAdd({
+    const primary: FavouriteJourney = {
       ...selectedVariant,
       ...stop,
       id: [
@@ -153,6 +258,58 @@ export default function SetupPanel({
         stop.stopId,
         stop.seq,
       ].join("-"),
+    };
+
+    setCheckingJointRoute(true);
+    setError("");
+    try {
+      const alternativeOperator: Operator =
+        selectedVariant.operator === "KMB" ? "CTB" : "KMB";
+      const alternativeRoutes = await fetchRouteVariants(alternativeOperator);
+      const alternativeVariant = findJointVariant(
+        selectedVariant,
+        alternativeRoutes,
+      );
+
+      if (!alternativeVariant) {
+        onAdd(primary);
+        onClose();
+        return;
+      }
+
+      const alternativeStops = await fetchStopsForVariant(alternativeVariant);
+      const suggestedStop = suggestAlternativeStop(stop, alternativeStops);
+      setAlternativeStopQuery("");
+      setJointDraft({
+        primary,
+        alternativeVariant,
+        stops: alternativeStops,
+        selectedStopId: suggestedStop?.stopId ?? "",
+        suggestedStopId: suggestedStop?.stopId ?? "",
+      });
+    } catch (caught) {
+      setError(
+        `Couldn’t check the alternative operator: ${readableError(caught)}. Tap the boarding stop to try again.`,
+      );
+    } finally {
+      setCheckingJointRoute(false);
+    }
+  }
+
+  function confirmJointRoute() {
+    if (!jointDraft) return;
+    const alternativeStop = jointDraft.stops.find(
+      (stop) => stop.stopId === jointDraft.selectedStopId,
+    );
+    if (!alternativeStop) return;
+
+    const alternative: JourneyLeg = {
+      ...jointDraft.alternativeVariant,
+      ...alternativeStop,
+    };
+    onAdd({
+      ...jointDraft.primary,
+      alternatives: [alternative],
     });
     onClose();
   }
@@ -201,6 +358,11 @@ export default function SetupPanel({
                         ? journey.nameTc || journey.nameEn
                         : journey.nameEn || journey.nameTc}
                     </small>
+                    {journey.alternatives?.length ? (
+                      <em className="linked-operators">
+                        {[journey.operator, ...journey.alternatives.map((item) => item.operator)].join(" + ")}
+                      </em>
+                    ) : null}
                   </span>
                   <button
                     className="text-button danger"
@@ -259,6 +421,8 @@ export default function SetupPanel({
                 setSelectedRoute("");
                 setSelectedVariant(null);
                 setStops([]);
+                setJointDraft(null);
+                setAlternativeStopQuery("");
               }}
             />
 
@@ -276,6 +440,8 @@ export default function SetupPanel({
                       setRouteQuery(route);
                       setSelectedVariant(null);
                       setStops([]);
+                      setJointDraft(null);
+                      setAlternativeStopQuery("");
                     }}
                   >
                     {route}
@@ -374,7 +540,7 @@ export default function SetupPanel({
                     <button
                       type="button"
                       key={`${stop.stopId}-${stop.seq}`}
-                      disabled={duplicate}
+                      disabled={duplicate || checkingJointRoute}
                       onClick={() => addStop(stop)}
                     >
                       <span className="stop-sequence">{stop.seq}</span>
@@ -397,6 +563,133 @@ export default function SetupPanel({
             )}
           </section>
         </div>
+
+        {checkingJointRoute && (
+          <div className="joint-route-backdrop" role="status" aria-live="polite">
+            <div className="joint-route-loading">
+              <span aria-hidden="true" />
+              <strong>Checking for another operator…</strong>
+              <small>Joint routes need one confirmed stop for each company.</small>
+            </div>
+          </div>
+        )}
+
+        {jointDraft && (
+          <div className="joint-route-backdrop" role="presentation">
+            <section
+              className="joint-route-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="joint-route-title"
+            >
+              <header className="joint-route-header">
+                <div>
+                  <p className="eyebrow">Jointly operated route</p>
+                  <h3 id="joint-route-title">Confirm the {jointDraft.alternativeVariant.operator} stop</h3>
+                </div>
+                <button
+                  className="icon-button"
+                  type="button"
+                  aria-label="Return to primary stop selection"
+                  onClick={() => setJointDraft(null)}
+                >
+                  <span aria-hidden="true">×</span>
+                </button>
+              </header>
+
+              <div className="joint-route-body">
+                <p className="joint-route-intro">
+                  Route {jointDraft.primary.route} also runs under {jointDraft.alternativeVariant.operator}.
+                  Stop names and locations can differ between company feeds, so please confirm the suggested stop or choose another one.
+                </p>
+
+                <div className="joint-route-summary">
+                  <div>
+                    <span>{jointDraft.primary.operator}</span>
+                    <strong>{jointDraft.primary.nameEn}</strong>
+                    <small>{jointDraft.primary.nameTc}</small>
+                  </div>
+                  <span className="joint-route-link" aria-hidden="true">↔</span>
+                  <div>
+                    <span>{jointDraft.alternativeVariant.operator}</span>
+                    <strong>
+                      {jointDraft.stops.find((stop) => stop.stopId === jointDraft.selectedStopId)?.nameEn ??
+                        "Choose a stop below"}
+                    </strong>
+                    <small>
+                      {jointDraft.stops.find((stop) => stop.stopId === jointDraft.selectedStopId)?.nameTc ??
+                        "請選擇車站"}
+                    </small>
+                  </div>
+                </div>
+
+                <label className="field-label" htmlFor="alternative-stop-search">
+                  Search {jointDraft.alternativeVariant.operator} stops
+                </label>
+                <input
+                  id="alternative-stop-search"
+                  className="search-input"
+                  type="search"
+                  autoComplete="off"
+                  placeholder="English or 中文 stop name"
+                  value={alternativeStopQuery}
+                  onChange={(event) => setAlternativeStopQuery(event.target.value)}
+                />
+
+                <div className="alternative-stop-list" role="radiogroup" aria-label="Alternative operator stops">
+                  {matchingAlternativeStops.map((stop) => {
+                    const selected = stop.stopId === jointDraft.selectedStopId;
+                    const suggested = stop.stopId === jointDraft.suggestedStopId;
+                    return (
+                      <button
+                        className={selected ? "selected" : ""}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        key={`${stop.stopId}-${stop.seq}`}
+                        onClick={() =>
+                          setJointDraft((current) =>
+                            current ? { ...current, selectedStopId: stop.stopId } : current,
+                          )
+                        }
+                      >
+                        <span className="stop-sequence">{stop.seq}</span>
+                        <span>
+                          <strong>{stop.nameEn}</strong>
+                          <small>{stop.nameTc}</small>
+                        </span>
+                        <span className="alternative-stop-state">
+                          {suggested ? "Suggested" : selected ? "Selected" : ""}
+                        </span>
+                      </button>
+                    );
+                  })}
+                  {matchingAlternativeStops.length === 0 && (
+                    <p className="empty-inline">No matching stops.</p>
+                  )}
+                </div>
+              </div>
+
+              <footer className="joint-route-actions">
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => setJointDraft(null)}
+                >
+                  Back
+                </button>
+                <button
+                  className="primary-button"
+                  type="button"
+                  disabled={!jointDraft.selectedStopId}
+                  onClick={confirmJointRoute}
+                >
+                  Confirm and add both
+                </button>
+              </footer>
+            </section>
+          </div>
+        )}
 
         {error && (
           <div className="setup-error" role="alert">

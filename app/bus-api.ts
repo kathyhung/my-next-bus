@@ -2,6 +2,7 @@ import type {
   Bound,
   EtaRecord,
   FavouriteJourney,
+  JourneyLeg,
   Operator,
   RouteVariant,
   StopOption,
@@ -256,7 +257,7 @@ export async function fetchStopsForVariant(variant: RouteVariant) {
   });
 }
 
-export async function fetchJourneyEtas(journey: FavouriteJourney) {
+async function fetchJourneyLegEtas(journey: JourneyLeg) {
   const url =
     journey.operator === "KMB"
       ? `${KMB_BASE}/eta/${journey.stopId}/${encodeURIComponent(journey.route)}/${journey.serviceType}`
@@ -277,6 +278,7 @@ export async function fetchJourneyEtas(journey: FavouriteJourney) {
     .map<EtaRecord>((row) => ({
       timestamp: Date.parse(row.eta as string),
       etaSequence: Number(row.eta_seq),
+      operator: journey.operator,
       remarkEn: row.rmk_en ?? "",
       remarkTc: row.rmk_tc ?? "",
     }))
@@ -287,5 +289,34 @@ export async function fetchJourneyEtas(journey: FavouriteJourney) {
   return {
     records,
     generatedAt: payload.generated_timestamp,
+  };
+}
+
+export async function fetchJourneyEtas(journey: FavouriteJourney) {
+  const legs: JourneyLeg[] = [journey, ...(journey.alternatives ?? [])];
+  const results = await Promise.allSettled(legs.map(fetchJourneyLegEtas));
+  const successful = results.flatMap((result) =>
+    result.status === "fulfilled" ? [result.value] : [],
+  );
+
+  if (successful.length === 0) {
+    const failure = results.find(
+      (result): result is PromiseRejectedResult => result.status === "rejected",
+    );
+    throw failure?.reason instanceof Error
+      ? failure.reason
+      : new Error("The official feeds are unavailable");
+  }
+
+  return {
+    records: successful
+      .flatMap((result) => result.records)
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .slice(0, 3),
+    generatedAt: successful
+      .map((result) => result.generatedAt)
+      .filter((timestamp): timestamp is string => Boolean(timestamp))
+      .sort()
+      .at(-1),
   };
 }
